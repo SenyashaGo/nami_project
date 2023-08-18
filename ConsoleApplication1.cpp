@@ -17,7 +17,7 @@ struct one_channel {
 	long id;
 	int bitrate;
 	char msg[8];
-	double periodicity;
+	unsigned long periodicity;
 };
 
 struct cheakf {
@@ -113,7 +113,7 @@ canStatus ConnectionToChannel(canHandle& handle, int channel_number, int bitrate
 		return stat;
 
 	handle = hnd;
-	printf("channel %i is open for sending", channel_number);
+	printf("channel %i is open\n", channel_number);
 	return canOK;
 }
 
@@ -136,6 +136,7 @@ canStatus ThreatSend(bool stop, bool pause, vector<one_channel>& setap, int send
 			if (stat != canOK)
 				return stat;
 			Sleep(setap[send_number_port].periodicity);
+			printf("message is send\n");
 		}
 		Sleep(100);
 	}
@@ -151,21 +152,14 @@ canStatus ThreatSend(bool stop, bool pause, vector<one_channel>& setap, int send
 	return canOK;
 }
 
-canStatus ReadMessageFromChnl(canHandle& handle, long& id, char *msg, unsigned int& dlc, unsigned int& flags, unsigned long& timestamp) {
-
+canStatus ReadMessageFromChnl(canHandle& handle, long& id, char* msg, unsigned int& dlc, unsigned int& flags, unsigned long& timestamp) {
 	canStatus stat;
 	stat = canReadWait(handle, &id, msg, &dlc, &flags, &timestamp, 100);
 	if (stat == canOK) {
-		if (flags & canMSG_ERROR_FRAME) {
+		if (flags & canMSG_ERROR_FRAME)
 			printf("***ERROR FRAME RECEIVED***");
-			return stat;
-		}
-		return stat;
 	}
-	else if (stat != canERR_NOMSG) {
-		Check("canRead", stat);
-		return stat;
-	}
+	return stat;
 }
 
 canStatus ThreatRead(bool stop, bool pause, vector<one_channel>& setap, int send_number_port, vector<cheakf> &cheak) {
@@ -187,43 +181,47 @@ canStatus ThreatRead(bool stop, bool pause, vector<one_channel>& setap, int send
 			printf("error connection\n");
 			continue;
 		}
-		cheakf ch = { number_port_read,false, false,false };
+		cheakf ch = { number_port_read,false, false,false};
 		int sec = 0;
 		int timer = 0;
 
-		printf("Listening for messages on channel %d\n", number_port_read);
+		printf("Listening messages on channel %d\n", number_port_read);
 		while (true) {
-			int cnt;
-			ReadMessageFromChnl(hnd, id, msg, dlc, flags, timestamp);
+			int cnt=0;
+			stat=ReadMessageFromChnl(hnd, id, msg, dlc, flags, timestamp);
+			if (stat != canOK) {
+				return stat;
+				printf("cant read message");
+				break;
+			}
 			timer = timestamp - sec;
 			sec = timestamp;
 			
-			if (id == setap[send_number_port].id)
-			{
-				cheak_id = true;
+			if (id == setap[send_number_port].id){
+				printf("Id: %ld, Msg: %u %u %u %u %u %u %u %u length: %u Flags: %lu\n",
+					id, msg[0], msg[1], msg[2], msg[3], msg[4],
+					msg[5], msg[6], msg[7], dlc, timestamp);
+				ch.cheak_id = true;
 				if (msg == setap[send_number_port].msg)
-					cheak_msg = true;
+					ch.cheak_msg = true;
 				if (timer == setap[send_number_port].periodicity)
-					cheak_periodicity = true;
+					ch.cheak_periodicity = true;
 				cnt += 1;
 			}
+			printf("error id %li\n", id);
 			if (cnt == 5)
 				break;
 		}
 
-
-
+		cheak.push_back(ch);
+		printf("Going of bus and closing channel %i\n", number_port_read);
 		stat = canBusOff(hnd);
 		Check("canBusOff", stat);
 		stat = canClose(hnd);
 		Check("canClose", stat);
-
-		//printf("correct read message from channel %i\n", i);
-//printf("Id: %ld, Msg: %u %u %u %u %u %u %u %u length: %u Flags: %lu\n",
-//	id, msg[0], msg[1], msg[2], msg[3], msg[4],
-//	msg[5], msg[6], msg[7], dlc, timestamp);
 	}
 	return stat;
+	stop = true;
 }
 
 
@@ -242,37 +240,43 @@ int main() {
 
 	int bitrate;
 	char msg[8] = { '1', '2', '3', '4', '5', '6', '7', '8'};
-	struct one_channel a1 = { 0, 0x300, SetBitrate(bitrate,5000000), msg[0], msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7], 1000 };
-	struct one_channel a2 = { 0, 0x600, SetBitrate(bitrate,5000000), msg[0], msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7], 1000 };
-	struct one_channel a3 = { 0, 0x400, SetBitrate(bitrate,5000000), msg[0], msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7], 1000 };
+	SetBitrate(bitrate, 500000);
+	struct one_channel a1 = { 0, 0x300, bitrate, msg[0], msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7], 1000 };
+	struct one_channel a2 = { 0, 0x600, bitrate, msg[0], msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7], 1000 };
+	struct one_channel a3 = { 0, 0x400, bitrate, msg[0], msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7], 1000 };
 
 	setap.push_back(a1);
 	setap.push_back(a2);
 	setap.push_back(a3);
 
-	for (int i = 0;i < setap.size(); i++) {
-		printf("%i %li %i", setap[i].nubmer_port, setap[i].id, setap[i].bitrate);
-		for (int j = 0;j < 8; j++)
-			printf("%c ", setap[i].msg[j]);
-		printf("%lf\n", setap[i].periodicity);
-	}
+	//for (int i = 0;i < setap.size(); i++) {
+	//	printf("%i %li %i", setap[i].nubmer_port, setap[i].id, setap[i].bitrate);
+	//	for (int j = 0;j < 8; j++)
+	//		printf("%c ", setap[i].msg[j]);
+	//	printf("%li\n", setap[i].periodicity);
+	//}
 
-
+	vector<cheakf> cheaking;
 	int send_number_port = 0;
-
-	thread read([&]() {
-		//ThreatRead();
-		});
 
 
 	thread send([&]() {
-		ThreatSend(stop, pause, setap, send_number_port);
+		//ThreatSend(stop, pause, setap, send_number_port);
+		});
+
+
+	thread read([&]() {
+		ThreatRead(stop, pause, setap, send_number_port,cheaking);
 		});
 
 
 
-	read.join();
+
+
 	send.join();
+	read.join();
+
+
 }
 
 
