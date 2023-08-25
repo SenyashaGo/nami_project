@@ -25,8 +25,8 @@ public:
 						{
 							book2[j].msg_ind = false;
 							printf("Ошибка! Полученное сообщение не совпадает с заданным. Заданное сообщение - %u %u %u %u %u %u %u %u %u, полученное сообщение - %u %u %u %u %u %u %u %u %u\n", book[i].msg[0],
-								book[i].msg[1], book[i].msg[2], book[i].msg[3], book[i].msg[4], book[i].msg[5], book[i].msg[6], book[i].msg[7], book2[i].msg[0],
-								book2[i].msg[1], book2[i].msg[2], book2[i].msg[3], book2[i].msg[4], book2[i].msg[5], book2[i].msg[6], book2[i].msg[7]);
+								book[i].msg[1], book[i].msg[2], book[i].msg[3], book[i].msg[4], book[i].msg[5], book[i].msg[6], book[i].msg[7], book2[j].msg[0],
+								book2[j].msg[1], book2[j].msg[2], book2[j].msg[3], book2[j].msg[4], book2[j].msg[5], book2[j].msg[6], book2[j].msg[7]);
 							break;
 						}
 						else
@@ -41,6 +41,7 @@ public:
 					else
 					{
 						printf("Ошибка при получении id- %d, не совпадает время. Заданное значение- %f, полученное- %f\n", book[i].id, book[i].periodicity, book2[j].periodicity);
+						book2[j].periodicity_ind = false;
 					}
 				}
 				else if (book[i].id == book2[j].id && !book2[j].port_ind && !book[i].otpravka_ind)
