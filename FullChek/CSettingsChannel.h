@@ -11,5 +11,6 @@ public:
 	int bitrate;
 	char msg[8];
 	unsigned long periodicity;
+	bool type_id;
 };
 
