@@ -19,21 +19,49 @@ public:
 			str += "Порт " + to_string(Output_book[i].nubmer_port) + "\n";
 			if (Output_book[i].cheak_periodicity && Output_book[i].cheak_id && Output_book[i].cheak_msg)
 			{
-				str += "Порт " + to_string(Output_book[i].nubmer_port) + "прошёл проверку\n";
+				str += "Порт " + to_string(Output_book[i].nubmer_port) + " успешно получил ID " + to_string(Output_book[i].id) + "\n";
 			}
 			else
 			{
 				if (!Output_book[i].cheak_periodicity)
 				{
-					str += "Ошибка! Частота получения сообщения на порту " + to_string(Output_book[i].nubmer_port) + " не совпадает с заданным\n";
+					str += "Ошибка! Частота получения сообщения на порту " + to_string(Output_book[i].nubmer_port) + " не совпадает с заданным. ID " + to_string(Output_book[i].id) + "\n";
+					for (int z = 0; z < book_Struk_input.size(); z++)
+					{
+						if (book_Struk_input[z].id == Output_book[i].id)
+						{
+
+							str += "Заданный периуд - " + to_string(book_Struk_input[i].periodicity) + " полученный - " + to_string(Output_book[i].periodicity) + "\n";
+							break;
+						}
+					}
 				}
 				if (!Output_book[i].cheak_msg)
 				{
-					str += "Ошибка! Полученое сообщение на порту " + to_string(Output_book[i].nubmer_port) + " не совпадает с заданным\n";
+					str += "Ошибка! Полученое сообщение на порту " + to_string(Output_book[i].nubmer_port) + " не совпадает с заданным. ID " + to_string(Output_book[i].id) + "\n";
+					str += "Заданое сообщение - ";
+					for (int z = 0; z < book_Struk_input.size(); z++)
+					{
+						if (book_Struk_input[z].id == Output_book[i].id)
+						{
+
+							for (int j = 0; j < 8; j++)
+							{
+								str += book_Struk_input[z].msg[j] + " ";
+							}
+							break;
+						}
+					}
+					str += "; полученное - ";
+					for (int j = 0; j < 8; j++)
+					{
+						str += Output_book[i].msg[j] + " ";
+					}
+					str += "\n";
 				}
 				if (!Output_book[i].cheak_id)
 				{
-					str += "Ошибка! Порт " + to_string(Output_book[i].nubmer_port) + " не нашёл id\n";
+					str += "Ошибка! Порт " + to_string(Output_book[i].nubmer_port) + " не нашёл ID\n";
 				}
 			}
 		}
@@ -41,7 +69,7 @@ public:
 		{
 			if (Struk_book[i].msg_ind && Struk_book[i].periodicity_ind && Struk_book[i].port_ind)
 			{
-				str += "Порт " + to_string(Struk_book[i].port) + " успешно получил id " + to_string(Struk_book[i].id) + "\n";
+				str += "Порт " + to_string(Struk_book[i].port) + " успешно получил ID " + to_string(Struk_book[i].id) + "\n";
 			}
 			else if (Struk_book[i].port == -1)
 			{
@@ -53,9 +81,17 @@ public:
 				{
 					str += "Ошибка! Полученное сообщение на порт " + to_string(Struk_book[i].port) + " не совпадает с заданным\n";
 					str += "Заданое сообщение - ";
-					for (int j = 0; j < 8; j++)
+					for (int z = 0; z < book_Struk_input.size(); z++)
 					{
-						str += book_Struk_input[i].msg[j] + " ";
+						if (book_Struk_input[z].id == Struk_book[i].id)
+						{
+
+							for (int j = 0; j < 8; j++)
+							{
+								str += book_Struk_input[z].msg[j] + " ";
+							}
+							break;
+						}
 					}
 					str += "; полученное - ";
 					for (int j = 0; j < 8; j++)
@@ -67,7 +103,14 @@ public:
 				if (!Struk_book[i].periodicity_ind)
 				{
 					str += "Ошибка! Частота получения сообщения на порту " + to_string(Struk_book[i].port) + " не совпадает с заданным\n";
-					str += "Заданный периуд - " + to_string(book_Struk_input[i].periodicity) + " полученный - " + to_string(Struk_book[i].port) + "\n";
+					for (int z = 0; z < book_Struk_input.size(); z++)
+					{
+						if (book_Struk_input[z].id == Struk_book[i].id)
+						{
+							str += "Заданный периуд - " + to_string(book_Struk_input[z].periodicity) + " полученный - " + to_string(Struk_book[i].periodicity) + "\n";
+							break;
+						}
+					}
 				}
 			}
 		}
