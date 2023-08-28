@@ -1,12 +1,13 @@
 #include "CSettingsChannel.h"
 
-CSettingsChannel::CSettingsChannel(int newnubmer_port, long newid, int newbitrate, char newmsg[8], unsigned long newperiodicity) {
+CSettingsChannel::CSettingsChannel(int newnubmer_port, long newid, int newbitrate, char newmsg[8], unsigned long newperiodicity, bool newtype_id) {
 	nubmer_port = newnubmer_port;
 	id = newid;
 	bitrate = SetBitrate(newbitrate);
 	for (int i = 0;i < 8;i++)
 		msg[i] = newmsg[i];
 	periodicity = newperiodicity;
+	type_id = newtype_id;
 }
 
 CSettingsChannel::~CSettingsChannel() {
