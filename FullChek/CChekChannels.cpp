@@ -2,9 +2,10 @@
 
 using namespace std;
 
-CChekChannels::CChekChannels(int newsend_number_port, vector<CSettingsChannel> newsetap, vector<COutputChannel>* newresult)
+CChekChannels::CChekChannels(int newsend_number_port,vector<CKit> newkit, vector<CSettingsChannel> newsetap, vector<COutputChannel>* newresult)
 {
 	send_number_port = newsend_number_port;
+	kit = newkit;
 	setap = newsetap;
 	result = newresult;
 }
@@ -76,43 +77,10 @@ canStatus CChekChannels::ConnectionToChannel(canHandle& handle, int channel_numb
 	return stat;
 }
 
-canStatus CChekChannels::ThreatSend(atomic<bool>& stop, atomic<bool>& pause, vector<CSettingsChannel>& setap, int send_number_port)
-{
-	canHandle hnd;
-	canStatus stat=canOK;
-
-	stat = ConnectionToChannel(hnd, send_number_port, setap[send_number_port].bitrate);
-	if (stat != canOK)
-		return report(stat,pause);
-
-	chrono::time_point<chrono::steady_clock> time1, time2, time3;
-	while (stop == false) {
-		stat = canWrite(hnd, setap[send_number_port].id, setap[send_number_port].msg, 8, 0);
-		if (stat != canOK)
-			return report(stat, pause);
-		printf("message is send\n");
-		stat = canWriteSync(hnd, setap[send_number_port].periodicity);
-		if (stat != canOK)
-			return report(stat, pause);
-		Sleep(setap[send_number_port].periodicity);
-	}
-
-	printf("Going of bus and closing channel %i\n", send_number_port);
-	stat = canBusOff(hnd);
-	if (stat != canOK)
-		return report(stat, pause);
-	stat = canClose(hnd);
-	if (stat != canOK)
-		return report(stat, pause);
-
-	pause = true;
-	return stat;
-}
-
-canStatus CChekChannels::ReadMessageFromChnl(canHandle& handle, long& id, char* msg, unsigned int& dlc, unsigned int& flags, unsigned long& timestamp)
+canStatus CChekChannels::ReadMessageFromChnl(canHandle& handle, long& id, char* msg, unsigned int& dlc, unsigned int& flags, unsigned long& timestamp, int time)
 {
 	canStatus stat = canOK;
-	stat = canReadWait(handle, &id, msg, &dlc, &flags, &timestamp, 100);
+	stat = canReadWait(handle, &id, msg, &dlc, &flags, &timestamp, time);
 	if (stat == canOK) {
 		if (flags & canMSG_ERROR_FRAME)
 			printf("***ERROR FRAME RECEIVED***");
@@ -120,19 +88,54 @@ canStatus CChekChannels::ReadMessageFromChnl(canHandle& handle, long& id, char* 
 	return stat;
 }
 
+canStatus CChekChannels::ThreatSend(atomic<bool>& stop, std::vector<CKit> kit, vector<CSettingsChannel>& setap, int send_number_port)
+{
+	canHandle hnd;
+	canStatus stat=canOK;
+
+	stat = ConnectionToChannel(hnd, setap[send_number_port].nubmer_port, kit[setap[send_number_port].nubmer_port].bitrate);
+	if (stat != canOK)
+		return report(stat, stop);
+
+	chrono::time_point<chrono::steady_clock> time1, time2, time3;
+	while (stop == false) {
+		stat = canWrite(hnd, setap[send_number_port].id, setap[send_number_port].msg, 8, 0);
+		if (stat != canOK)
+			return report(stat, stop);
+		printf("message is send\n");
+		Sleep(setap[send_number_port].periodicity);
+		stat = canWriteSync(hnd, 100);
+		if (stat != canOK)
+			return report(stat, stop);
+	}
+
+	printf("Going of bus and closing channel %i\n", setap[send_number_port].nubmer_port);
+	stat = canBusOff(hnd);
+	if (stat != canOK)
+		return report(stat, stop);
+	stat = canClose(hnd);
+	if (stat != canOK)
+		return report(stat, stop);
+
+
+
+	stop = true;
+	return stat;
+}
+
 int AvaregeTime(vector<int> per) {
 	int sum = 0;
-	if (per.size() < 2)
+	if (per.size() < 3)
 		return 0;
 	for (int i = 0; i < per.size();i++) {
-		if (i == 0)
+		if (i == 0 || i == 1)
 			continue;
 		sum += per[i];
 	}
-	return int(sum / (per.size() - 1));
+	return int(sum / (per.size() - 2));
 }
 
-canStatus CChekChannels::ThreatRead(atomic<bool>& stop, atomic<bool>& pause, vector<CSettingsChannel>& setap, int send_number_port, vector<COutputChannel>& result) {
+canStatus CChekChannels::ThreatRead(atomic<bool>& stop, std::vector<CKit> kit, vector<CSettingsChannel>& setap, int send_number_port, vector<COutputChannel>& result) {
 	canHandle hnd;
 	canStatus stat=canOK;
 
@@ -141,32 +144,56 @@ canStatus CChekChannels::ThreatRead(atomic<bool>& stop, atomic<bool>& pause, vec
 	char msg[8];
 	DWORD timestamp;
 
-	for (int number_port_read = 0;number_port_read < setap.size();number_port_read++)
+	for (int number_port_read = 0; number_port_read < setap.size(); number_port_read++)
 	{
-		if (number_port_read == send_number_port)
+		if (kit[number_port_read].number_port == setap[send_number_port].nubmer_port)
 			continue;
 
-		stat = ConnectionToChannel(hnd, number_port_read, setap[number_port_read].bitrate);
+		stat = ConnectionToChannel(hnd, kit[number_port_read].number_port, kit[number_port_read].bitrate);
 		if (stat != canOK) {
 			printf("error connection\n");
 			continue;
 		}
+		printf("Going of bus and closing channel %i\n", kit[number_port_read].number_port);
+		stat = canBusOff(hnd);
+		if (stat != canOK)
+			return report(stat, stop);
+		stat = canClose(hnd);
+		if (stat != canOK)
+			return report(stat, stop);
+		stat = ConnectionToChannel(hnd, kit[number_port_read].number_port, kit[number_port_read].bitrate);
+		if (stat != canOK) {
+			printf("error connection\n");
+			continue;
+		}
+
 		int cnt = 0;
-		char mass[8];
+		char mass[8]{};
 		vector<int> per;
-		COutputChannel res = { number_port_read, false, false, false, 0, mass, 0 };
+		per.clear();
+		COutputChannel res = { kit[number_port_read].number_port, false, false, false, -1, mass, -1 };
 		chrono::time_point<chrono::steady_clock> time1, time2, time3, time4;
 
 		int t = 0;
-		printf("Listening messages on channel %d\n", number_port_read);
+		printf("Listening messages on channel %d\n", kit[number_port_read].number_port);
 		Sleep(500);
 		time1 = chrono::high_resolution_clock::now();
-		while (pause = false) {
-			stat = ReadMessageFromChnl(hnd, id, msg, dlc, flags, timestamp);
+		while (stop != true) {
+
+			time2 = chrono::high_resolution_clock::now();
+			std::chrono::duration<double> duration = time2 - time1;
+			if (duration.count() > int(setap[send_number_port].periodicity*0.012))
+				break;
+
+			stat = ReadMessageFromChnl(hnd, id, msg, dlc, flags, timestamp, setap[send_number_port].periodicity);
 			if (stat != canOK) {
 				printf("cant read message\n");
 				return report(stat, stop);
 			}
+
+			if (id == 0x700 || id == 0x701)
+				continue;
+
 			res.id = id;
 			for (int i = 0;i < 8;i++)
 				res.msg[i] = msg[i];
@@ -180,31 +207,26 @@ canStatus CChekChannels::ThreatRead(atomic<bool>& stop, atomic<bool>& pause, vec
 				time3 = chrono::high_resolution_clock::now();
 				std::chrono::duration<double> timer = time3 - time4;
 				time4 = time3;
-				t = int(timer.count()*1000);
+				t = int(timer.count() * 1000);
 				per.push_back(t);
-				
 				printf("%i\n", t);
-				if (verifyMSG(msg, setap[send_number_port].msg))
-					res.cheak_msg = true;
-				if (AvaregeTime(per)> setap[send_number_port].periodicity-15 && AvaregeTime(per) < setap[send_number_port].periodicity + 15)
-					res.cheak_periodicity = true;
-				res.periodicity = AvaregeTime(per);
+
+				res.cheak_msg = verifyMSG(msg, setap[send_number_port].msg);
+
 				cnt += 1;
-				Sleep(setap[send_number_port].periodicity);
 			}
-			else printf("error id %li\n", id);
-			
-			if (cnt >= 5)
+
+			if (cnt >= 7) {
+				res.periodicity = AvaregeTime(per);
+				if (res.periodicity > int(setap[send_number_port].periodicity * 0.9) && res.periodicity < int(setap[send_number_port].periodicity * 1.1))
+					res.cheak_periodicity = true;
+
 				break;
-			
-			time2 = chrono::high_resolution_clock::now();
-			std::chrono::duration<double> duration = time2 - time1;
-			if (duration.count() > 10)
-				break;
+			}
 		}
 
 		result.push_back(res);
-		printf("Going of bus and closing channel %i\n", number_port_read);
+		printf("Going of bus and closing channel %i\n", kit[number_port_read].number_port);
 		stat = canBusOff(hnd);
 		if (stat != canOK)
 			return report(stat, stop);
@@ -216,17 +238,19 @@ canStatus CChekChannels::ThreatRead(atomic<bool>& stop, atomic<bool>& pause, vec
 	return stat;
 }
 
-void CChekChannels::Start() {
+vector <canStatus> CChekChannels::Start() {
+	vector<canStatus> stat;
 	thread send([&]() {
-		printf("\n\n%i\n\n",int(ThreatSend(stop, pause, setap, send_number_port)));
+		stat.push_back(ThreatSend(stop, kit, setap, send_number_port));
 		});
 
 
 	thread read([&]() {
-		printf("\n\n%i\n\n", int(ThreatRead(stop, pause, setap, send_number_port, *result)));
+		stat.push_back(ThreatRead(stop, kit, setap, send_number_port, *result));
 		});
 
 	send.join();
 	read.join();
 
+	return stat;
 }

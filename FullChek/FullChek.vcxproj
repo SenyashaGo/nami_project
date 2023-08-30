@@ -152,14 +152,18 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CChekChannels.cpp" />
+    <ClCompile Include="CKit.cpp" />
     <ClCompile Include="COutputChannel.cpp" />
     <ClCompile Include="CSettingsChannel.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CChekChannels.h" />
+    <ClInclude Include="CGenerating_a_report_file.h" />
+    <ClInclude Include="CKit.h" />
     <ClInclude Include="COutputChannel.h" />
     <ClInclude Include="CSettingsChannel.h" />
+    <ClInclude Include="CShort_check.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
